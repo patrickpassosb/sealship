@@ -1,0 +1,47 @@
+.toggle {
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-full);
+    padding: var(--space-2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    transition: all var(--transition-base);
+    color: var(--text-secondary);
+    backdrop-filter: blur(8px);
+}
+
+.toggle:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    box-shadow: var(--shadow-glow);
+    transform: scale(1.05);
+}
+
+.iconWrapper {
+    position: relative;
+    width: 20px;
+    height: 20px;
+}
+
+.icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    transition: all var(--transition-base);
+}
+
+.visible {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+.hidden {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+}
