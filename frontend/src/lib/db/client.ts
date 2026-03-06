@@ -1,3 +1,21 @@
+// Sealship — Database Client (SQLite)
+// Handles all persistent storage using better-sqlite3
+//
+// DATABASE DESIGN:
+// - repositories: Stores unique GitHub repositories
+// - analyses: Stores each analysis run with scores, status, and references
+// - leaderboard: View for ranking repositories
+//
+// WHY SQLITE?
+// - Zero configuration - no database server needed
+// - Perfect for a hackathon/MVP
+// - ACID compliant - reliable transactions
+// - better-sqlite3 - synchronous, simple API, fast
+//
+// WAL MODE:
+// Write-Ahead Logging improves concurrent read performance
+// Important for the polling-based UI (many readers, occasional writers)
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -5,10 +23,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { ScoringResult, AnalysisStatus } from '@/types';
 
-// Database file location
+// Database file location - defaults to ./data/sealship.db
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'sealship.db');
 
-// Ensure data directory exists
+// Ensure data directory exists before connecting
 const dbDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
@@ -17,16 +35,20 @@ if (!fs.existsSync(dbDir)) {
 // Connect to database
 const db = new Database(DB_PATH);
 try {
-    db.pragma('journal_mode = WAL'); // Better concurrency performance
+    // WAL mode allows concurrent reads while writing
+    // This is crucial for our polling-based frontend
+    db.pragma('journal_mode = WAL');
 
-    // Initialize schema if not exists
+    // Initialize schema from schema.sql if it exists
+    // This creates tables if they don't exist on first run
     const schemaPath = path.join(process.cwd(), 'src', 'lib', 'db', 'schema.sql');
     if (fs.existsSync(schemaPath)) {
         const schema = fs.readFileSync(schemaPath, 'utf8');
         db.exec(schema);
     }
 } catch (e: unknown) {
-    // Ignore busy errors during Next.js parallel build
+    // Ignore SQLITE_BUSY errors during Next.js parallel builds
+    // This can happen when multiple server instances start simultaneously
     if ((e as { code?: string }).code !== 'SQLITE_BUSY') {
         console.warn('DB Init warning:', e);
     }

@@ -1,5 +1,10 @@
 // Sealship — GitHub API Client
 // Retrieves repository metadata, file tree, and content via the GitHub REST API
+//
+// USAGE NOTES:
+// - The GitHub API has rate limits (60 requests/hour without token, 5000 with)
+// - Always provide GITHUB_TOKEN for production use
+// - We use the REST API (not GraphQL) for simplicity and broader compatibility
 
 import { RepositoryMetadata, FileTreeEntry } from '@/types';
 
@@ -7,40 +12,56 @@ const GITHUB_API_BASE = 'https://api.github.com';
 
 /**
  * Parse a GitHub repository URL into owner and name.
- * Supports formats:
+ * 
+ * Supports various URL formats users might input:
  *   - https://github.com/owner/repo
  *   - https://github.com/owner/repo.git
- *   - github.com/owner/repo
- *   - owner/repo
+ *   - http://github.com/owner/repo
+ *   - github.com/owner/repo (without https)
+ *   - owner/repo (shorthand)
+ * 
+ * @throws Error if the URL format is not recognized
  */
 export function parseRepoUrl(url: string): { owner: string; name: string } {
-    // Remove trailing slashes and .git
+    // Clean up the input - remove trailing slashes and .git suffix
     const cleaned = url.trim().replace(/\/+$/, '').replace(/\.git$/, '');
 
-    // Try full URL pattern
+    // Try full URL pattern first (handles https://github.com/owner/repo)
+    // The regex captures: (1) owner, (2) repo name
     const urlMatch = cleaned.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/]+)/);
     if (urlMatch) {
         return { owner: urlMatch[1], name: urlMatch[2] };
     }
 
-    // Try owner/repo pattern
+    // Try shorthand pattern (owner/repo)
     const shortMatch = cleaned.match(/^([^/]+)\/([^/]+)$/);
     if (shortMatch) {
         return { owner: shortMatch[1], name: shortMatch[2] };
     }
 
+    // Neither pattern matched - invalid format
     throw new Error(`Invalid GitHub repository URL: ${url}`);
 }
 
 /**
  * Create GitHub API headers with optional authentication.
+ * 
+ * Using a token significantly increases rate limits:
+ * - Without token: 60 requests/hour
+ * - With token: 5000 requests/hour
+ * 
+ * The GITHUB_TOKEN should be a Personal Access Token (PAT)
+ * with 'repo' scope for private repos, or public repos only scope
  */
 function getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
+        // Request v3 API responses - this is the standard GitHub API version
         'Accept': 'application/vnd.github.v3+json',
+        // GitHub requires a User-Agent - helps with rate limiting
         'User-Agent': 'Sealship/1.0',
     };
 
+    // Add authentication token if available
     const token = process.env.GITHUB_TOKEN;
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -51,6 +72,15 @@ function getHeaders(): Record<string, string> {
 
 /**
  * Make a request to the GitHub API with error handling.
+ * 
+ * Handles common error cases:
+ * - 404: Repository not found or private (no access)
+ * - 403 rate limited: When quota is exhausted
+ * - Other errors: Network issues, server errors
+ * 
+ * @param path - API endpoint path (e.g., "/repos/owner/name")
+ * @returns Parsed JSON response
+ * @throws Error with descriptive message
  */
 async function githubFetch<T>(path: string): Promise<T> {
     const url = `${GITHUB_API_BASE}${path}`;
@@ -61,6 +91,7 @@ async function githubFetch<T>(path: string): Promise<T> {
             throw new Error(`Repository not found: ${path}`);
         }
         if (response.status === 403) {
+            // Check if rate limited - GitHub sends this header when quota is exhausted
             const remaining = response.headers.get('x-ratelimit-remaining');
             if (remaining === '0') {
                 throw new Error('GitHub API rate limit exceeded. Please provide a GITHUB_TOKEN.');

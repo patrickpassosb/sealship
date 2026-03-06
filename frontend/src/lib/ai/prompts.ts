@@ -1,9 +1,32 @@
 // Sealship — AI Prompt Templates for Repository Analysis
+//
+// PROMPT ENGINEERING STRATEGY:
+// 
+// SYSTEM PROMPT:
+// - Defines the AI's persona as an expert code reviewer
+// - Sets boundaries: no markdown, clear tone, specific feedback
+// - The tone-adjustment based on score creates emotional intelligence
+//
+// USER PROMPT:
+// - Provides the actual scoring data in a structured format
+// - Asks for specific outputs: summary, strengths, improvements
+// - Enforces length constraints to keep responses useful
+//
+// WHY NO MARKDOWN?
+// The raw text is easier to display in various UIs without parsing.
+// We handle formatting in our frontend components instead.
 
 import { ScoringResult, CategoryScore, Signal } from '@/types';
 
 /**
  * System prompt that sets the AI's role and output guidelines.
+ * 
+ * This establishes the "persona" of the AI reviewer.
+ * Key constraints:
+ * - No markdown formatting (plain text output)
+ * - Specific, metric-referenced feedback
+ * - Constructive tone (even for low scores)
+ * - Word count limits for consistency
  */
 export const SYSTEM_PROMPT = `You are Sealship's AI analysis engine — an expert software engineering reviewer.
 
@@ -24,10 +47,22 @@ Guidelines:
 
 /**
  * Builds the user prompt with the actual scoring data.
+ * 
+ * This formats the scoring result into a readable prompt for the LLM.
+ * Each category shows:
+ * - Category name and score
+ * - Each individual signal (found/not found, points)
+ * - Any additional details
+ * 
+ * @param result - The complete scoring result
+ * @param repoFullName - "owner/repo" format
+ * @returns Formatted prompt string for the LLM
  */
 export function buildAnalysisPrompt(result: ScoringResult, repoFullName: string): string {
+    // Format each category as a readable section
     const categoryLines = Object.entries(result.categories)
         .map(([key, cat]: [string, CategoryScore]) => {
+            // List each signal with its status and point value
             const signalDetails = cat.signals
                 .map((s: Signal) => `  - ${s.name}: ${s.found ? 'Found' : 'Not found'} (${s.points}/${s.maxPoints} pts)${s.details ? ` — ${s.details}` : ''}`)
                 .join('\n');
@@ -36,6 +71,7 @@ export function buildAnalysisPrompt(result: ScoringResult, repoFullName: string)
         })
         .join('\n\n');
 
+    // Assemble the complete prompt
     return `Analyze the following GitHub repository quality metrics:
 
 Repository: ${repoFullName}
