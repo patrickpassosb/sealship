@@ -1,10 +1,28 @@
 // Sealship — Generic OpenAI-Compatible LLM Provider
-// Supports: Mistral, Cerebras, OpenRouter, Grok, OpenAI, and any OpenAI-compatible API
+// Supports: Mistral, Cerebras, OpenRouter, Grok, OpenAI, Groq, Together AI, DeepSeek
+//
+// ARCHITECTURE DECISION:
+// Instead of writing provider-specific code for each AI service, we use the
+// OpenAI-compatible API format. Most modern LLM providers now support this,
+// which means we can use a single code path for all of them.
+//
+// SUPPORTED PROVIDERS:
+// - Mistral: European AI company, strong open models
+// - Cerebras: Ultra-fast inference, excellent for latency-sensitive apps
+// - OpenRouter: Aggregates many providers, good for routing/backup
+// - Grok: xAI's model, known for witty responses
+// - OpenAI: The original, GPT-4o is the flagship
+// - Groq: Another fast inference engine
+// - Together AI: Running open models at scale
+// - DeepSeek: Chinese AI company with strong open models
+//
+// HOW TO ADD A NEW PROVIDER:
+// Just add an entry to PROVIDER_DEFAULTS below with baseUrl and model name!
 
 import { LLMConfig, LLMMessage, LLMResponse } from '@/types';
 
 // Default configurations for known providers
-// Source: Official API documentation for each provider
+// These are sensible defaults - users can override via environment variables
 const PROVIDER_DEFAULTS: Record<string, Partial<LLMConfig>> = {
     mistral: {
         baseUrl: 'https://api.mistral.ai/v1',
