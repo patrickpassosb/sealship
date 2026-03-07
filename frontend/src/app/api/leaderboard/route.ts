@@ -14,7 +14,7 @@ export async function GET(req: Request) {
         // Ensure limit is safe
         const safeLimit = Math.max(1, Math.min(limit, 100));
 
-        const leaderboard = getLeaderboard(safeLimit);
+        const leaderboard = await getLeaderboard(safeLimit);
 
         return NextResponse.json({
             success: true,

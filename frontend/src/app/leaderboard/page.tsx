@@ -4,7 +4,7 @@ import { getLeaderboard } from '@/lib/db/client';
 export const revalidate = 60; // Regenerate this page every 60 seconds
 
 export default async function LeaderboardPage() {
-    const leaderboard = getLeaderboard(100);
+    const leaderboard = await getLeaderboard(100);
 
     return (
         <div className="container py-12 md:py-24 max-w-5xl">

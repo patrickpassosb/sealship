@@ -5,7 +5,7 @@ import { getLeaderboard } from '@/lib/db/client';
 export default async function Home() {
   // We can optionally fetch the top 3 projects to display on the home page statically
   // For the MVP, we just show the form
-  const topProjects = getLeaderboard(3);
+  const topProjects = await getLeaderboard(3);
 
   return (
     <div className="container py-12 md:py-24">

@@ -11,12 +11,11 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
-
         if (!id) {
             return NextResponse.json({ success: false, error: 'Analysis ID is required' }, { status: 400 });
         }
 
-        const analysis = getAnalysis(id);
+        const analysis = await getAnalysis(id);
 
         if (!analysis) {
             return NextResponse.json({ success: false, error: 'Analysis not found' }, { status: 404 });

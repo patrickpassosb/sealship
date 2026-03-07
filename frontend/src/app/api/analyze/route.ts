@@ -20,7 +20,7 @@ export const maxDuration = 60; // Next.js feature for Vercel
  */
 async function runAnalysisPipeline(analysisId: string, owner: string, name: string, commitSha: string) {
     try {
-        const analysis = getAnalysis(analysisId);
+        const analysis = await getAnalysis(analysisId);
         if (!analysis) return;
 
         // 1. Fetch File Tree
@@ -38,7 +38,7 @@ async function runAnalysisPipeline(analysisId: string, owner: string, name: stri
         console.log(`[${analysisId}] Scoring repository...`);
         const metadata = await getRepositoryMetadata(owner, name);
         const scoringResult = scoreRepository(metadata, fileTree, commitSha, readmeContent);
-        updateAnalysisScores(analysisId, scoringResult);
+        await updateAnalysisScores(analysisId, scoringResult);
 
         // 3. AI Analysis
         console.log(`[${analysisId}] Generating AI analysis...`);
@@ -57,13 +57,13 @@ async function runAnalysisPipeline(analysisId: string, owner: string, name: stri
             console.log(`[${analysisId}] Warning: LLM_API_KEY not set. Using mock AI analysis.`);
             aiAnalysisText = `This is a mock analysis for ${owner}/${name} because the LLM API key wasn't provided. The repository scored ${scoringResult.totalScore}/100. It shows strong signals in Testing and Security, but could improve Documentation.`;
         }
-        updateAnalysisAI(analysisId, aiAnalysisText);
+        await updateAnalysisAI(analysisId, aiAnalysisText);
 
         // 4. Generate & Upload Report to IPFS
         console.log(`[${analysisId}] Uploading report to IPFS...`);
         const report = generateReport(`${owner}/${name}`, scoringResult, aiAnalysisText);
         const ipfsCid = await uploadToIPFS(report as unknown as Record<string, unknown>, `sealship-report-${scoringResult.repoHash}`);
-        updateAnalysisIPFS(analysisId, ipfsCid);
+        await updateAnalysisIPFS(analysisId, ipfsCid);
 
         console.log(`[${analysisId}] Analysis pipeline completed. CID: ${ipfsCid}`);
 
@@ -71,7 +71,7 @@ async function runAnalysisPipeline(analysisId: string, owner: string, name: stri
 
     } catch (error) {
         console.error(`[${analysisId}] Pipeline failed:`, error);
-        failAnalysis(analysisId);
+        await failAnalysis(analysisId);
     }
 }
 
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
         }
 
         // Record repository in DB
-        const dbRepo = getOrCreateRepository(owner, name);
+        const dbRepo = await getOrCreateRepository(owner, name);
 
         // Fetch latest commit SHA
         // First need repo metadata to get default branch
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
         const repoHash = `${repoUrl}:${commitSha}`; // Will be keccak256 on chain
 
         // Initialize Analysis Record
-        const analysis = createAnalysis(dbRepo.id, commitSha, repoHash);
+        const analysis = await createAnalysis(dbRepo.id, commitSha, repoHash);
 
         // Run the rest of the pipeline in the background
         // (Next.js serverless functions might kill background tasks, but for local/hackathon it works fine)

@@ -1,61 +1,22 @@
-// Sealship — Database Client (SQLite)
-// Handles all persistent storage using better-sqlite3
+// Sealship — Database Client (Supabase/PostgreSQL)
+// Handles all persistent storage using Supabase JS client
 //
 // DATABASE DESIGN:
 // - repositories: Stores unique GitHub repositories
 // - analyses: Stores each analysis run with scores, status, and references
 // - leaderboard: View for ranking repositories
 //
-// WHY SQLITE?
-// - Zero configuration - no database server needed
-// - Perfect for a hackathon/MVP
-// - ACID compliant - reliable transactions
-// - better-sqlite3 - synchronous, simple API, fast
-//
-// WAL MODE:
-// Write-Ahead Logging improves concurrent read performance
-// Important for the polling-based UI (many readers, occasional writers)
+// WHY SUPABASE?
+// - Production ready: Scalable PostgreSQL on the cloud
+// - Vercel Friendly: SQLite is not persistent on serverless environments
+// - Real-time: Built-in support for real-time listeners (optional)
 
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-
+import { supabase } from '@/lib/supabase';
 import { ScoringResult, AnalysisStatus } from '@/types';
 
-// Database file location - defaults to ./data/sealship.db
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'sealship.db');
-
-// Ensure data directory exists before connecting
-const dbDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-}
-
-// Connect to database
-const db = new Database(DB_PATH);
-try {
-    // WAL mode allows concurrent reads while writing
-    // This is crucial for our polling-based frontend
-    db.pragma('journal_mode = WAL');
-
-    // Initialize schema from schema.sql if it exists
-    // This creates tables if they don't exist on first run
-    const schemaPath = path.join(process.cwd(), 'src', 'lib', 'db', 'schema.sql');
-    if (fs.existsSync(schemaPath)) {
-        const schema = fs.readFileSync(schemaPath, 'utf8');
-        db.exec(schema);
-    }
-} catch (e: unknown) {
-    // Ignore SQLITE_BUSY errors during Next.js parallel builds
-    // This can happen when multiple server instances start simultaneously
-    if ((e as { code?: string }).code !== 'SQLITE_BUSY') {
-        console.warn('DB Init warning:', e);
-    }
-}
-
 // ============================================================================
-// Database Operations
+// Database Interfaces
 // ============================================================================
 
 export interface DbRepository {
@@ -84,128 +45,225 @@ export interface DbAnalysis {
     created_at: string;
 }
 
+export interface LeaderboardEntry {
+    owner: string;
+    name: string;
+    url: string;
+    commit_sha: string;
+    total_score: number;
+    report_cid?: string;
+    analyzed_at: string;
+    id: string; 
+}
+
+// ============================================================================
+// Database Operations
+// ============================================================================
+
 /**
  * Get or create a repository by URL.
  */
-export function getOrCreateRepository(owner: string, name: string): DbRepository {
+export async function getOrCreateRepository(owner: string, name: string): Promise<DbRepository> {
     const url = `https://github.com/${owner}/${name}`;
 
-    const existing = db.prepare('SELECT * FROM repositories WHERE url = ?').get(url) as DbRepository;
-    if (existing) return existing;
+    const { data: existing, error: getError } = await supabase
+        .from('repositories')
+        .select('*')
+        .eq('url', url)
+        .single();
+
+    if (existing) return existing as DbRepository;
+    if (getError && getError.code !== 'PGRST116') { // PGRST116 is code for "no rows found"
+        console.error('Supabase getOrCreateRepository error:', getError);
+    }
 
     const id = uuidv4();
-    db.prepare('INSERT INTO repositories (id, owner, name, url) VALUES (?, ?, ?, ?)').run(id, owner, name, url);
-    return db.prepare('SELECT * FROM repositories WHERE id = ?').get(id) as DbRepository;
+    const { data: inserted, error: insertError } = await supabase
+        .from('repositories')
+        .insert([{ id, owner, name, url }])
+        .select()
+        .single();
+
+    if (insertError) {
+        throw new Error(`Failed to create repository: ${insertError.message}`);
+    }
+
+    return inserted as DbRepository;
 }
 
 /**
  * Create a new analysis record.
  */
-export function createAnalysis(repositoryId: string, commitSha: string, repoHash: string): DbAnalysis {
+export async function createAnalysis(repositoryId: string, commitSha: string, repoHash: string): Promise<DbAnalysis> {
     const id = uuidv4();
-    const stmt = db.prepare(`
-    INSERT INTO analyses (
-      id, repository_id, commit_sha, repo_hash,
-      total_score, documentation_score, testing_score, architecture_score, hygiene_score, security_score,
-      status
-    ) VALUES (
-      ?, ?, ?, ?,
-      0, 0, 0, 0, 0, 0,
-      'analyzing'
-    )
-  `);
+    
+    const { data, error } = await supabase
+        .from('analyses')
+        .insert([{
+            id,
+            repository_id: repositoryId,
+            commit_sha: commitSha,
+            repo_hash: repoHash,
+            total_score: 0,
+            documentation_score: 0,
+            testing_score: 0,
+            architecture_score: 0,
+            hygiene_score: 0,
+            security_score: 0,
+            status: 'analyzing'
+        }])
+        .select()
+        .single();
 
-    stmt.run(id, repositoryId, commitSha, repoHash);
-    return getAnalysis(id)!;
+    if (error) {
+        throw new Error(`Failed to create analysis: ${error.message}`);
+    }
+
+    return data as DbAnalysis;
 }
 
 /**
  * Update analysis scoring results.
  */
-export function updateAnalysisScores(id: string, result: ScoringResult): void {
-    db.prepare(`
-    UPDATE analyses SET
-      total_score = ?,
-      documentation_score = ?,
-      testing_score = ?,
-      architecture_score = ?,
-      hygiene_score = ?,
-      security_score = ?,
-      status = 'scoring'
-    WHERE id = ?
-  `).run(
-        result.totalScore,
-        result.categories.documentation.score,
-        result.categories.testing.score,
-        result.categories.architecture.score,
-        result.categories.hygiene.score,
-        result.categories.security.score,
-        id
-    );
+export async function updateAnalysisScores(id: string, result: ScoringResult): Promise<void> {
+    const { error } = await supabase
+        .from('analyses')
+        .update({
+            total_score: result.totalScore,
+            documentation_score: result.categories.documentation.score,
+            testing_score: result.categories.testing.score,
+            architecture_score: result.categories.architecture.score,
+            hygiene_score: result.categories.hygiene.score,
+            security_score: result.categories.security.score,
+            status: 'scoring'
+        })
+        .eq('id', id);
+
+    if (error) {
+        console.error('Supabase updateAnalysisScores error:', error);
+    }
 }
 
 /**
  * Update analysis AI report.
  */
-export function updateAnalysisAI(id: string, aiAnalysis: string): void {
-    db.prepare("UPDATE analyses SET ai_analysis = ?, status = 'ai_analysis' WHERE id = ?").run(aiAnalysis, id);
+export async function updateAnalysisAI(id: string, aiAnalysis: string): Promise<void> {
+    const { error } = await supabase
+        .from('analyses')
+        .update({
+            ai_analysis: aiAnalysis,
+            status: 'ai_analysis'
+        })
+        .eq('id', id);
+
+    if (error) {
+        console.error('Supabase updateAnalysisAI error:', error);
+    }
 }
 
 /**
  * Update IPFS CID.
  */
-export function updateAnalysisIPFS(id: string, cid: string): void {
-    db.prepare("UPDATE analyses SET report_cid = ?, status = 'uploading_ipfs' WHERE id = ?").run(cid, id);
+export async function updateAnalysisIPFS(id: string, cid: string): Promise<void> {
+    const { error } = await supabase
+        .from('analyses')
+        .update({
+            report_cid: cid,
+            status: 'uploading_ipfs'
+        })
+        .eq('id', id);
+
+    if (error) {
+        console.error('Supabase updateAnalysisIPFS error:', error);
+    }
 }
 
 /**
  * Update blockchain transaction hash (finalize).
  */
-export function finalizeAnalysis(id: string, txHash: string): void {
-    db.prepare("UPDATE analyses SET tx_hash = ?, status = 'completed' WHERE id = ?").run(txHash, id);
+export async function finalizeAnalysis(id: string, txHash: string): Promise<void> {
+    const { error } = await supabase
+        .from('analyses')
+        .update({
+            tx_hash: txHash,
+            status: 'completed'
+        })
+        .eq('id', id);
+
+    if (error) {
+        console.error('Supabase finalizeAnalysis error:', error);
+    }
 }
 
 /**
  * Mark analysis as failed.
  */
-export function failAnalysis(id: string): void {
-    db.prepare("UPDATE analyses SET status = 'failed' WHERE id = ?").run(id);
+export async function failAnalysis(id: string): Promise<void> {
+    const { error } = await supabase
+        .from('analyses')
+        .update({ status: 'failed' })
+        .eq('id', id);
+
+    if (error) {
+        console.error('Supabase failAnalysis error:', error);
+    }
 }
 
 /**
  * Get an analysis by ID.
  */
-export function getAnalysis(id: string): DbAnalysis | null {
-    return db.prepare('SELECT * FROM analyses WHERE id = ?').get(id) as DbAnalysis | null;
-}
+export async function getAnalysis(id: string): Promise<DbAnalysis | null> {
+    const { data, error } = await supabase
+        .from('analyses')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-export interface LeaderboardEntry {
-    id: string;
-    owner: string;
-    name: string;
-    total_score: number;
-    report_cid?: string;
-    commit_sha: string;
-    tx_hash?: string;
+    if (error) {
+        if (error.code !== 'PGRST116') {
+            console.error('Supabase getAnalysis error:', error);
+        }
+        return null;
+    }
+
+    return data as DbAnalysis;
 }
 
 /**
  * Get the global leaderboard.
  */
-export function getLeaderboard(limit = 50): LeaderboardEntry[] {
-    return db.prepare('SELECT * FROM leaderboard LIMIT ?').all(limit) as LeaderboardEntry[];
+export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
+    const { data, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .limit(limit);
+
+    if (error) {
+        console.error('Supabase getLeaderboard error:', error);
+        return [];
+    }
+
+    return data as LeaderboardEntry[];
 }
 
 /**
  * Get analysis history for a repository.
  */
-export function getRepositoryHistory(repositoryId: string): DbAnalysis[] {
-    return db.prepare(`
-    SELECT * FROM analyses 
-    WHERE repository_id = ? AND status = 'completed'
-    ORDER BY created_at DESC
-  `).all(repositoryId) as DbAnalysis[];
+export async function getRepositoryHistory(repositoryId: string): Promise<DbAnalysis[]> {
+    const { data, error } = await supabase
+        .from('analyses')
+        .select('*')
+        .eq('repository_id', repositoryId)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Supabase getRepositoryHistory error:', error);
+        return [];
+    }
+
+    return data as DbAnalysis[];
 }
 
-// Export the underlying db instance for custom queries
-export default db;
+// Export the underlying supabase instance for custom queries
+export default supabase;
