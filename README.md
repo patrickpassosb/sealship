@@ -235,20 +235,27 @@ curl http://localhost:3000/api/leaderboard?limit=10
 
 ### Deploy to Polkadot Hub TestNet
 
-1. Configure your wallet private key in `.env`:
+1. Configure deploy secrets in root `.env`:
    ```
-   POLKADOT_PRIVATE_KEY=your_private_key_here
+   POLKADOT_RPC_URL=https://eth-rpc-testnet.polkadot.io
+   POLKADOT_PRIVATE_KEY=your_private_key_here   # 64 hex chars, no 0x
    ```
 
-2. Get free PAS tokens from the faucet: https://faucet.polkadot.io/
-
-3. Deploy the contract:
+2. Install contract deps and run readiness checks:
    ```bash
    cd contracts
-   npx hardhat run scripts/deploy.ts --network polkadotHubTestNet
+   npm ci
+   npm test
    ```
 
-4. Copy the deployed contract address to your frontend `.env`:
+3. Get free PAS tokens from the faucet: https://faucet.polkadot.io/
+
+4. Deploy the contract (from `contracts/`):
+   ```bash
+   npm run deploy:polkadot
+   ```
+
+5. Copy the deployed contract address to your frontend `.env`:
    ```
    NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
    ```

@@ -4,19 +4,26 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "hardhat compile",
+    "test": "hardhat run scripts/smoke.ts --network hardhat",
+    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
+    "deploy:polkadot": "hardhat run scripts/deploy.ts --network polkadotHubTestNet"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.6",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.3",
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.3.3",
+    "chai": "^6.2.2",
     "hardhat": "^3.1.10",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "viem": "^2.47.0"
   },
   "dependencies": {
     "dotenv": "^17.3.1"
