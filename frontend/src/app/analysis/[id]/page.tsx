@@ -63,7 +63,7 @@ export default function AnalysisPage() {
         );
     }
 
-    if (!analysis || analysis.status !== 'completed' && analysis.status !== 'failed') {
+    if (!analysis || (analysis.status !== 'completed' && analysis.status !== 'failed' && analysis.status !== 'uploading_ipfs')) {
         // Show Loading Progress
         return (
             <div className="container py-12">

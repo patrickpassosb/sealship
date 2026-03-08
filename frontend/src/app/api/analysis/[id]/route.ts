@@ -22,7 +22,7 @@ export async function GET(
         }
 
         // Determine polling interval based on status
-        const isComplete = analysis.status === 'completed' || analysis.status === 'failed';
+        const isComplete = analysis.status === 'completed' || analysis.status === 'failed' || analysis.status === 'uploading_ipfs';
 
         return NextResponse.json(
             {

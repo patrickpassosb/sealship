@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { getRepositoryMetadata, getLatestCommitSha, getFileTree, getFileContent, parseRepoUrl } from '@/lib/github/client';
 import { scoreRepository } from '@/lib/scoring/engine';
 import { getOrCreateRepository, createAnalysis, updateAnalysisScores, updateAnalysisAI, updateAnalysisIPFS, failAnalysis, getAnalysis } from '@/lib/db/client';
@@ -117,9 +117,11 @@ export async function POST(req: Request) {
         // Initialize Analysis Record
         const analysis = await createAnalysis(dbRepo.id, commitSha, repoHash);
 
-        // Run the rest of the pipeline in the background
-        // (Next.js serverless functions might kill background tasks, but for local/hackathon it works fine)
-        runAnalysisPipeline(analysis.id, owner, name, commitSha).catch(console.error);
+        // Run the rest of the pipeline in the background using Next.js after()
+        // This keeps the serverless function alive on Vercel until the work completes
+        after(async () => {
+            await runAnalysisPipeline(analysis.id, owner, name, commitSha);
+        });
 
         return NextResponse.json({
             success: true,
