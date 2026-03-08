@@ -1,5 +1,5 @@
-// Sealship — IPFS Pinata Client
-// Handles uploading analysis reports to IPFS via Pinata Free Tier
+// Sealship — IPFS Pinata Client (V3 SDK)
+// Handles uploading analysis reports to IPFS via Pinata
 //
 // WHY IPFS?
 // IPFS (InterPlanetary File System) provides decentralized, permanent storage.
@@ -16,73 +16,59 @@
 // 3. Store the CID on-chain in the Sealship contract
 // 4. Anyone can retrieve the full report via IPFS using the CID
 
-export interface PinataResponse {
-    IpfsHash: string;
-    PinSize: number;
-    Timestamp: string;
+import { PinataSDK } from "pinata";
+
+let pinata: PinataSDK | null = null;
+
+function getPinataClient(): PinataSDK | null {
+    const jwt = process.env.PINATA_JWT;
+    if (!jwt || process.env.MOCK_IPFS === 'true') {
+        return null;
+    }
+    if (!pinata) {
+        pinata = new PinataSDK({
+            pinataJwt: jwt,
+            pinataGateway: process.env.NEXT_PUBLIC_GATEWAY_URL || "gateway.pinata.cloud",
+        });
+    }
+    return pinata;
 }
 
 /**
- * Upload JSON data to IPFS using Pinata.
- * 
+ * Upload JSON data to IPFS using Pinata V3 SDK.
+ *
  * The data parameter contains the complete analysis report:
  * - Repository info and commit
  * - All scoring signals and category breakdowns
  * - AI-generated analysis text
  * - Timestamp and version
- * 
+ *
  * @param data - The JSON object to upload
  * @param name - A descriptive name for the pin (helps in Pinata dashboard)
- * @returns The IPFS CID (Content Identifier) - starts with "Qm" or "bafy"
- * 
- * @note When MOCK_IPFS=true, returns a fake CID for testing without API keys
+ * @returns The IPFS CID (Content Identifier) - CID v1 format ("bafy...")
+ *
+ * @note When MOCK_IPFS=true or PINATA_JWT is unset, returns a fake CID for testing
  */
 export async function uploadToIPFS(data: Record<string, unknown>, name: string): Promise<string> {
-    const pinataApiKey = process.env.PINATA_API_KEY;
-    const pinataSecretApiKey = process.env.PINATA_SECRET_API_KEY;
+    const client = getPinataClient();
 
     // MOCK MODE: For development/testing without Pinata keys
-    // This allows the app to work out of the box for demo purposes
-    if (!pinataApiKey || !pinataSecretApiKey || process.env.MOCK_IPFS === 'true') {
+    if (!client) {
         console.log('[IPFS Mock] Simulating upload to IPFS...', name);
-        // Simulate network delay to mimic real API behavior
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        // Return a fake CID (looks like IPFS v0 hash)
-        // Real CIDs start with "Qm" (v0) or "bafy" (v1)
         return `QmMockHashFor${name.replace(/[^a-zA-Z0-9]/g, '')}${Date.now()}`;
     }
 
     try {
-        // Pinata's API endpoint for JSON uploads
-        const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                pinata_api_key: pinataApiKey,
-                pinata_secret_api_key: pinataSecretApiKey,
-            },
-            body: JSON.stringify({
-                // CID v1 uses base32 encoding (bafy...) - more modern
-                // CID v0 uses base58 (Qm...) - wider compatibility
-                pinataOptions: {
-                    cidVersion: 1,
-                },
-                // Metadata helps organize pins in Pinata dashboard
-                pinataMetadata: {
-                    name,
-                },
-                // The actual content to pin
-                pinataContent: data,
-            }),
-        });
+        const upload = await client.upload.public
+            .json(data)
+            .name(name)
+            .keyvalues({
+                project: "sealship",
+                type: "analysis-report",
+            });
 
-        if (!response.ok) {
-            const errorData = await response.text();
-            throw new Error(`Pinata API error: ${response.status} - ${errorData}`);
-        }
-
-        const result = (await response.json()) as PinataResponse;
-        return result.IpfsHash;
+        return upload.cid;
     } catch (error) {
         console.error('IPFS Upload Error:', error);
         throw new Error('Failed to upload report to IPFS');
