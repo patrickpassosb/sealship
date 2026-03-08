@@ -1,14 +1,30 @@
-import { ethers } from "hardhat";
+import { network } from "hardhat";
+
+function assertPolkadotEnv() {
+    const required = ["POLKADOT_RPC_URL", "POLKADOT_PRIVATE_KEY"] as const;
+    const missing = required.filter((key) => !process.env[key]);
+
+    if (missing.length > 0) {
+        throw new Error(
+            `Missing required env vars for testnet deploy: ${missing.join(", ")}. ` +
+            "Set them in ../.env before deploying to polkadotHubTestNet."
+        );
+    }
+}
 
 async function main() {
-    console.log("Deploying Sealship contract...");
+    const { viem } = await network.connect();
+    const networkName = process.env.HARDHAT_NETWORK || "hardhat";
 
-    const Sealship = await ethers.getContractFactory("Sealship");
-    const sealship = await Sealship.deploy();
+    console.log(`Deploying Sealship contract on network: ${networkName}`);
 
-    await sealship.waitForDeployment();
+    if (networkName === "polkadotHubTestNet") {
+        assertPolkadotEnv();
+    }
 
-    const address = await sealship.getAddress();
+    const sealship = await viem.deployContract("Sealship");
+    const address = sealship.address;
+
     console.log(`Sealship deployed to: ${address}`);
 
     console.log("");
