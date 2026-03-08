@@ -212,10 +212,10 @@ export async function failAnalysis(id: string): Promise<void> {
 /**
  * Get an analysis by ID.
  */
-export async function getAnalysis(id: string): Promise<DbAnalysis | null> {
+export async function getAnalysis(id: string): Promise<(DbAnalysis & { repo_url?: string }) | null> {
     const { data, error } = await supabase
         .from('analyses')
-        .select('*')
+        .select('*, repositories(url)')
         .eq('id', id)
         .single();
 
@@ -226,7 +226,8 @@ export async function getAnalysis(id: string): Promise<DbAnalysis | null> {
         return null;
     }
 
-    return data as DbAnalysis;
+    const { repositories, ...analysis } = data as any;
+    return { ...analysis, repo_url: repositories?.url ?? null };
 }
 
 /**

@@ -14,7 +14,7 @@ function assertPolkadotEnv() {
 
 async function main() {
     const { viem } = await network.connect();
-    const networkName = process.env.HARDHAT_NETWORK || "hardhat";
+    const networkName = network.name;
 
     console.log(`Deploying Sealship contract on network: ${networkName}`);
 

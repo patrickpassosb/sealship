@@ -10,7 +10,7 @@ export default function AnalysisPage() {
     const params = useParams();
     const id = params.id as string;
 
-    const [analysis, setAnalysis] = useState<DbAnalysis | null>(null);
+    const [analysis, setAnalysis] = useState<(DbAnalysis & { repo_url?: string }) | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isPolling, setIsPolling] = useState(true);
 
@@ -147,7 +147,7 @@ export default function AnalysisPage() {
                         repoHash={analysis.repo_hash}
                         score={analysis.total_score}
                         reportCid={analysis.report_cid || ''}
-                        repoUrl="https://github.com" // Needs actual repoUrl from API if we were truly strict, but hash enforces it
+                        repoUrl={analysis.repo_url || `https://github.com`}
                         existingTxHash={analysis.tx_hash}
                         onSuccess={handleFinalize}
                     />
