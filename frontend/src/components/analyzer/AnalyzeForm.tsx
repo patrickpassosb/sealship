@@ -49,21 +49,16 @@ export function AnalyzeForm() {
                 {/* Input area */}
                 <div className="hero-card-inner">
                     <label htmlFor="repoUrl" className="text-xs font-medium text-[var(--text-tertiary)] mb-1 block">Repository</label>
-                    <div className="relative group">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-xl group-focus-within:animate-wave pointer-events-none">
-                            🦭
-                        </span>
-                        <input
-                            id="repoUrl"
-                            type="url"
-                            className="input pl-10 h-12 text-base bg-transparent border-none focus:shadow-none"
-                            placeholder="https://github.com/owner/repo"
-                            value={repoUrl}
-                            onChange={(e) => setRepoUrl(e.target.value)}
-                            required
-                            disabled={isLoading}
-                        />
-                    </div>
+                    <input
+                        id="repoUrl"
+                        type="url"
+                        className="w-full h-10 text-base bg-transparent border-none outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] font-sans"
+                        placeholder="https://github.com/owner/repo"
+                        value={repoUrl}
+                        onChange={(e) => setRepoUrl(e.target.value)}
+                        required
+                        disabled={isLoading}
+                    />
                 </div>
 
                 {error && (

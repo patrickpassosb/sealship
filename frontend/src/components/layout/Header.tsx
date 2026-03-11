@@ -6,7 +6,7 @@ import GlobalPreferences from '@/components/layout/GlobalPreferences';
 export default function Header() {
     return (
         <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md" style={{ background: 'var(--header-bg)', borderColor: 'var(--header-border)' }}>
-            <div className="container flex items-center justify-between h-16">
+            <div className="flex items-center justify-between h-14 px-4">
                 {/* Left: Logo + Nav */}
                 <div className="flex items-center gap-8">
                     <Link href="/" className="flex items-center gap-2 group">

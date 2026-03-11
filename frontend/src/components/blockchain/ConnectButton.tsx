@@ -27,7 +27,7 @@ export function ConnectButton() {
             onClick={() => connect({ connector: injected() })}
             className="btn btn-primary"
         >
-            Connect Wallet
+            Connect
         </button>
     );
 }
