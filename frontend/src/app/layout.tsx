@@ -27,9 +27,9 @@ export default function RootLayout({
             <main className="flex-1">
               {children}
             </main>
-            <footer className="border-t py-6 text-center text-sm text-secondary bg-[var(--bg-secondary)]">
+            <footer className="border-t border-[var(--border-secondary)] py-4 text-center text-xs text-[var(--text-tertiary)]">
               <div className="container">
-                <p>🦭 Built for the Polkadot Solidity Hackathon</p>
+                Built on Polkadot Hub
               </div>
             </footer>
           </div>
