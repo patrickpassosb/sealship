@@ -67,7 +67,7 @@ export const config = createConfig({
 
 // Contract address - set after deployment
 // In production, this MUST be updated to the actual deployed address
-export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000';
+export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0xafcdfc86e0f0076dbce64c0f034310b2efe79589';
 
 /**
  * Contract ABI (Application Binary Interface)

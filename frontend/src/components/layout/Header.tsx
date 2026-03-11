@@ -1,6 +1,7 @@
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import Link from 'next/link';
 import { ConnectButton } from '@/components/blockchain/ConnectButton';
+import { GitHubAuthButton } from '@/components/auth/GitHubAuthButton';
 
 export default function Header() {
     return (
@@ -26,6 +27,7 @@ export default function Header() {
 
                     <div className="flex items-center gap-3">
                         <ThemeToggle />
+                        <GitHubAuthButton />
                         <ConnectButton />
                     </div>
                 </div>
