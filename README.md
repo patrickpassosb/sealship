@@ -27,8 +27,8 @@ Sealship evaluates repositories across 5 categories, each worth 20 points (total
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
        │                  │                  │                  │
        ▼                  ▼                  ▼                  ▼
-  Repository        SQLite DB         Report CID         tx_hash for
-  metadata &       (analyses)         (permanent)        verification
+  Repository      Supabase DB        Report CID         tx_hash for
+  metadata &      (PostgreSQL)       (permanent)        verification
   file tree
 ```
 
@@ -85,8 +85,7 @@ sealship/
 │   │   │   ├── blockchain/
 │   │   │   │   └── config.ts      # Wagmi + Viem config
 │   │   │   ├── db/
-│   │   │   │   ├── client.ts      # SQLite operations
-│   │   │   │   └── schema.sql      # Database schema
+│   │   │   │   └── client.ts      # Supabase/PostgreSQL operations
 │   │   │   ├── github/
 │   │   │   │   └── client.ts      # GitHub API client
 │   │   │   ├── ipfs/
@@ -100,7 +99,6 @@ sealship/
 │   │   └── types/
 │   │       └── index.ts           # TypeScript definitions
 │   │
-│   ├── data/                     # SQLite database
 │   ├── public/                   # Static assets
 │   ├── package.json               # Dependencies
 │   ├── tailwind.config.ts        # Tailwind config
@@ -123,7 +121,7 @@ sealship/
 - **github/client.ts**: Wraps the GitHub REST API. Fetches repo metadata, file trees, and file content (base64 decoded).
 - **ai/provider.ts**: A generic OpenAI-compatible LLM provider supporting Mistral, Cerebras, OpenRouter, Grok, and more. Uses the standard `/v1/chat/completions` endpoint.
 - **ipfs/pinata.ts**: Uploads JSON reports to IPFS via Pinata. Includes a mock mode for testing without API keys.
-- **db/client.ts**: SQLite database operations using `better-sqlite3`. Stores repositories and analysis records.
+- **db/client.ts**: Supabase/PostgreSQL database operations. Stores repositories and analysis records.
 
 ### `frontend/src/app/api/` — API Routes
 - **POST /api/analyze**: Accepts a GitHub URL, starts an async analysis pipeline, returns an `analysisId` for polling.
@@ -180,7 +178,6 @@ cp .env.example frontend/.env
 | `MOCK_IPFS` | Set to `true` to simulate IPFS uploads | Yes (for testing) |
 | `POLKADOT_PRIVATE_KEY` | Wallet private key for on-chain transactions | For verification |
 | `POLKADOT_RPC_URL` | RPC URL for Polkadot Hub TestNet | Optional |
-| `DB_PATH` | SQLite database path (default: `./data/sealship.db`) | Optional |
 | `NEXT_PUBLIC_APP_URL` | Your app's URL (for OpenRouter headers) | Recommended |
 
 ---

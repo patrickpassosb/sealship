@@ -274,8 +274,8 @@ Faucet:      https://faucet.polkadot.io/
 | Wallet | wagmi, viem |
 | Backend | Next.js API routes |
 | Smart Contracts | Solidity, Hardhat |
-| Database | SQLite (better-sqlite3) |
-| Cache | In-memory Map + SQLite (Redis-ready interface) |
+| Database | Supabase (PostgreSQL) |
+| Cache | In-memory Map (Redis-ready interface) |
 | Decentralized Storage | IPFS via Pinata |
 | AI | Generic OpenAI-compatible interface |
 | Testing | Vitest, Hardhat/Chai, Playwright |

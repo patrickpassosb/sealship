@@ -14,7 +14,6 @@
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-query": "^5.90.21",
-    "better-sqlite3": "^12.6.2",
     "next": "16.1.6",
     "pinata": "^2.5.5",
     "react": "19.2.3",
@@ -25,7 +24,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

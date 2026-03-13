@@ -8,7 +8,7 @@
 //
 // WHY SUPABASE?
 // - Production ready: Scalable PostgreSQL on the cloud
-// - Vercel Friendly: SQLite is not persistent on serverless environments
+// - Vercel friendly: persistent cloud storage for serverless deployments
 // - Real-time: Built-in support for real-time listeners (optional)
 
 import { v4 as uuidv4 } from 'uuid';
