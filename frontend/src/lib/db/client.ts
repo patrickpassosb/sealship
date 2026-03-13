@@ -226,8 +226,8 @@ export async function getAnalysis(id: string): Promise<(DbAnalysis & { repo_url?
         return null;
     }
 
-    const { repositories, ...analysis } = data as any;
-    return { ...analysis, repo_url: repositories?.url ?? null };
+    const { repositories, ...analysis } = data as DbAnalysis & { repositories?: { url: string } };
+    return { ...analysis, repo_url: repositories?.url ?? undefined };
 }
 
 /**

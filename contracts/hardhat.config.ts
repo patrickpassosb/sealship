@@ -10,9 +10,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-const PRIVATE_KEY = process.env.POLKADOT_PRIVATE_KEY;
+const RAW_KEY = process.env.POLKADOT_PRIVATE_KEY ?? "";
+// Accept keys with or without 0x prefix; normalize to bare hex for Hardhat
+const PRIVATE_KEY = RAW_KEY.startsWith("0x") ? RAW_KEY.slice(2) : RAW_KEY;
 const POLKADOT_RPC_URL = process.env.POLKADOT_RPC_URL || "https://eth-rpc-testnet.polkadot.io";
-const hasPrivateKey = typeof PRIVATE_KEY === "string" && PRIVATE_KEY.length === 64;
+const hasPrivateKey = /^[0-9a-fA-F]{64}$/.test(PRIVATE_KEY);
 
 const config = defineConfig({
     plugins: [hardhatToolboxViem],
