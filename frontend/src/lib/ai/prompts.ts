@@ -61,7 +61,7 @@ Guidelines:
 export function buildAnalysisPrompt(result: ScoringResult, repoFullName: string): string {
     // Format each category as a readable section
     const categoryLines = Object.entries(result.categories)
-        .map(([key, cat]: [string, CategoryScore]) => {
+        .map(([, cat]: [string, CategoryScore]) => {
             // List each signal with its status and point value
             const signalDetails = cat.signals
                 .map((s: Signal) => `  - ${s.name}: ${s.found ? 'Found' : 'Not found'} (${s.points}/${s.maxPoints} pts)${s.details ? ` — ${s.details}` : ''}`)

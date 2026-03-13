@@ -16,7 +16,7 @@
 // - Same repo, different commit → different hash (tracks evolution)
 // - Different repo → always different hash
 
-import { keccak256, toHex, encodePacked } from 'viem';
+import { keccak256, encodePacked } from 'viem';
 
 /**
  * Generate a unique repository hash using keccak256.
